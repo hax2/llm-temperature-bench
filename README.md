@@ -42,6 +42,11 @@ TORCH_INDEX_URL=https://download.pytorch.org/whl/cu128 ./scripts/bootstrap.sh
 The script deliberately does not install FlashAttention: SDPA works across more GPUs
 and models. After the baseline works, FlashAttention can be tested separately.
 
+`HF_HOME` does not need to be configured on managed Jupyter servers. When it is unset,
+the runner compares the default home cache with `/home/jovyan/.cache/huggingface` and
+uses the writable location with more free space. An explicitly configured `HF_HOME`
+still takes precedence.
+
 ## Running
 
 Start or resume the complete benchmark:

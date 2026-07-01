@@ -14,6 +14,7 @@ from rich.console import Console
 from rich.table import Table
 
 from tempbench.config import BenchmarkConfig, ModelSpec, PromptSpec, load_config
+from tempbench.environment import configure_huggingface_cache
 from tempbench.jobs import create_jobs, select_models, select_prompts
 from tempbench.storage import Job, RunStore, atomic_write_json
 
@@ -54,6 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     load_dotenv()
+    cache_path = configure_huggingface_cache()
     args = build_parser().parse_args(argv)
     try:
         config = load_config(args.config)
@@ -63,6 +65,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "plan":
             return command_plan(config, models, prompts, store)
         if args.command == "preflight":
+            console.print(f"Hugging Face cache: {cache_path}")
             return command_preflight(config, models, remote=args.remote)
         if args.command == "report":
             return command_report(store)

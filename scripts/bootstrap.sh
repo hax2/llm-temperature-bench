@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON="${PYTHON:-python3}"
 VENV="${VENV:-$ROOT/.venv}"
+# Some managed Jupyter images force pip's user mode globally. Packages in a
+# virtual environment must never use --user, so override that inherited setting.
+export PIP_USER=0
 
 if ! "$PYTHON" -c 'import sys; raise SystemExit(0 if (3, 11) <= sys.version_info[:2] < (3, 14) else 1)'; then
   echo "Python 3.11, 3.12, or 3.13 is required." >&2
@@ -37,4 +40,3 @@ for index in range(torch.cuda.device_count()):
 PY
 
 echo "Environment ready. Run: source \"$VENV/bin/activate\""
-
