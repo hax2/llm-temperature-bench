@@ -1,0 +1,83 @@
+models:
+  - id: llama-3.1-8b-base
+    repo: meta-llama/Llama-3.1-8B
+    variant: base
+    gated: true
+  - id: llama-3.1-8b-instruct
+    repo: meta-llama/Llama-3.1-8B-Instruct
+    variant: instruct
+    gated: true
+
+  - id: mistral-7b-v0.3-base
+    repo: mistralai/Mistral-7B-v0.3
+    variant: base
+  - id: mistral-7b-v0.3-instruct
+    repo: mistralai/Mistral-7B-Instruct-v0.3
+    variant: instruct
+
+  - id: qwen-2.5-14b-base
+    repo: Qwen/Qwen2.5-14B
+    variant: base
+  - id: qwen-2.5-14b-instruct
+    repo: Qwen/Qwen2.5-14B-Instruct
+    variant: instruct
+
+  - id: qwen-3.5-9b-base
+    repo: Qwen/Qwen3.5-9B-Base
+    variant: base
+    loader: multimodal
+  - id: qwen-3.5-9b-instruct
+    repo: Qwen/Qwen3.5-9B
+    variant: instruct
+    loader: multimodal
+    chat_template_kwargs: {enable_thinking: false}
+
+  - id: gemma-2-9b-base
+    repo: google/gemma-2-9b
+    variant: base
+    gated: true
+  - id: gemma-2-9b-it
+    repo: google/gemma-2-9b-it
+    variant: instruct
+    gated: true
+
+  - id: gemma-3-12b-base
+    repo: google/gemma-3-12b-pt
+    variant: base
+    gated: true
+    loader: multimodal
+  - id: gemma-3-12b-it
+    repo: google/gemma-3-12b-it
+    variant: instruct
+    gated: true
+    loader: multimodal
+  - id: gemma-3-27b-base
+    repo: google/gemma-3-27b-pt
+    variant: base
+    gated: true
+    loader: multimodal
+  - id: gemma-3-27b-it
+    repo: google/gemma-3-27b-it
+    variant: instruct
+    gated: true
+    loader: multimodal
+
+  - id: gemma-4-e4b-base
+    repo: google/gemma-4-E4B
+    variant: base
+    loader: multimodal
+  - id: gemma-4-e4b-it
+    repo: google/gemma-4-E4B-it
+    variant: instruct
+    loader: multimodal
+    chat_template_kwargs: {enable_thinking: false}
+
+  - id: deepseek-r1-distill-qwen-14b
+    repo: deepseek-ai/DeepSeek-R1-Distill-Qwen-14B
+    variant: instruct
+
+  - id: nemotron-labs-diffusion-14b
+    repo: nvidia/Nemotron-Labs-Diffusion-14B
+    variant: instruct
+    loader: custom
+    trust_remote_code: true

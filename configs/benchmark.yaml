@@ -1,0 +1,28 @@
+run:
+  output_dir: results
+  temperatures: [0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
+  samples_per_condition: 1
+  max_new_tokens: 1400
+  batch_size: 2
+  seed: 20260701
+  dtype: bfloat16
+  # none is the cleanest comparison. 4bit/8bit reduce VRAM but introduce a
+  # quantization confound and may not be supported by every new architecture.
+  quantization: none
+  attn_implementation: sdpa
+  # "auto" can spread a model over all visible GPUs. Set CUDA_VISIBLE_DEVICES
+  # before launch if only a subset should be used.
+  device_map: auto
+  low_cpu_mem_usage: true
+  trust_remote_code: false
+
+judge:
+  enabled: true
+  model: gemini-3-flash-preview
+  concurrency: 8
+  max_attempts: 7
+  request_timeout_seconds: 180
+  temperature: 0.0
+
+models_file: configs/models.yaml
+prompts_file: configs/prompts.yaml

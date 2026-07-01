@@ -1,0 +1,107 @@
+prompts:
+  - id: everest_facts
+    category: factual
+    title: Mount Everest factual essay
+    prompt: |
+      Write a clear 650–800 word factual essay about Mount Everest for an educated
+      general reader. Cover its location and border, accepted elevation, geological
+      formation, naming, the 1953 first confirmed ascent, the 1924 Mallory and Irvine
+      uncertainty, climbing routes, the death zone, major hazards, and environmental
+      pressures. Do not invent quotations. Distinguish established facts from uncertainty.
+    reference_facts:
+      - Everest lies in the Himalayas on the Nepal–China (Tibet) border.
+      - The jointly announced 2020 elevation is 8,848.86 metres above sea level.
+      - It formed through collision of the Indian and Eurasian tectonic plates.
+      - The Royal Geographical Society named it for George Everest in 1865; its Tibetan name is Chomolungma and Nepali name is Sagarmatha.
+      - Tenzing Norgay and Edmund Hillary made the first confirmed ascent on 29 May 1953.
+      - Whether George Mallory and Andrew Irvine reached the summit in 1924 is unknown.
+      - The two standard routes approach via Nepal's southeast ridge and Tibet's north ridge.
+      - The death zone generally refers to elevations above 8,000 metres.
+    criteria: [coherence, factuality, internal_consistency, instruction_following, fluency]
+
+  - id: apollo_11_facts
+    category: factual
+    title: Apollo 11 factual essay
+    prompt: |
+      Write a 600–750 word factual account of Apollo 11. Explain the mission objective,
+      crew roles, launch vehicle and dates, major spacecraft components, the landing,
+      activities on the surface, return to Earth, and historical significance. Include
+      exact dates where important. Avoid dramatic details unless they are documented,
+      and never fabricate dialogue.
+    reference_facts:
+      - Apollo 11 launched from Kennedy Space Center on 16 July 1969 on a Saturn V.
+      - Neil Armstrong was commander, Buzz Aldrin lunar module pilot, and Michael Collins command module pilot.
+      - The command module was Columbia and the lunar module was Eagle.
+      - Eagle landed in Mare Tranquillitatis on 20 July 1969 UTC.
+      - Armstrong and Aldrin walked on the Moon while Collins remained in lunar orbit.
+      - Armstrong became the first person to step onto the Moon, followed by Aldrin.
+      - The crew splashed down in the Pacific Ocean on 24 July 1969.
+    criteria: [coherence, factuality, internal_consistency, instruction_following, fluency]
+
+  - id: constrained_lighthouse_story
+    category: creative
+    title: Constraint-heavy short story
+    prompt: |
+      Write a coherent 700–900 word short story about a lighthouse keeper who receives
+      tomorrow's weather reports one day early. Use exactly four titled sections:
+      "I. Glass", "II. Static", "III. The Warning", and "IV. Dawn". The keeper must make
+      one consequential mistake, and the final section must resolve the central causal
+      chain without saying it was a dream. Keep the point of view third-person limited.
+    criteria: [coherence, creativity, internal_consistency, instruction_following, fluency]
+    constraints:
+      required_headings: ["I. Glass", "II. Static", "III. The Warning", "IV. Dawn"]
+      forbidden_phrases: ["it was all a dream", "it was just a dream"]
+
+  - id: causal_clockwork_story
+    category: creative
+    title: Long-range causal coherence story
+    prompt: |
+      Write a 700–900 word literary short story. In the opening paragraph, a watchmaker
+      secretly replaces one brass gear with a wooden one. By the ending, that choice must
+      cause an outcome that is surprising but logically traceable through at least three
+      intermediate events. Maintain stable character names, chronology, setting, and
+      physical facts. Do not use magic, prophecy, dreams, or an omniscient narrator.
+    criteria: [coherence, creativity, internal_consistency, instruction_following, fluency]
+    constraints:
+      forbidden_phrases: ["magic", "prophecy", "it was a dream", "omniscient"]
+
+  - id: synthesis_city_policy
+    category: reasoning
+    title: Evidence-bounded policy synthesis
+    prompt: |
+      A fictional city has 500,000 residents. Its weekday trips are 55% private car,
+      25% public transit, 15% walking, and 5% cycling. The city can fund exactly two of:
+      (A) protected cycle lanes costing $40M, (B) bus-priority corridors costing $70M,
+      (C) downtown parking expansion costing $60M, and (D) wider suburban roads costing
+      $90M. Its total budget is $120M. Write a 550–700 word recommendation that selects
+      exactly two options, stays within budget, accurately uses every supplied statistic,
+      gives a causal argument, addresses the strongest counterargument, and does not
+      introduce fabricated research findings.
+    reference_facts:
+      - Population is 500,000.
+      - "Mode shares sum to 100%: cars 55%, transit 25%, walking 15%, cycling 5%."
+      - Exactly two options must be chosen with combined cost no greater than $120M.
+      - A+B costs $110M; A+C $100M; A+D $130M; B+C $130M; B+D $160M; C+D $150M.
+      - Therefore only A+B and A+C are feasible pairs.
+    criteria: [coherence, factuality, internal_consistency, instruction_following, fluency]
+
+  - id: contradiction_repair
+    category: reasoning
+    title: Contradiction detection and repair
+    prompt: |
+      The notes below describe a fictional expedition:
+      - The team left Base Camp on Tuesday morning.
+      - The trip from Base Camp to Camp One took exactly 30 hours.
+      - They arrived at Camp One on Tuesday evening.
+      - Nobody traveled faster than the team.
+      - Mira reached Camp One six hours before the rest of the team.
+
+      Write a 450–600 word incident analysis. Identify every logical or temporal
+      contradiction, explain why it is a contradiction, and provide one minimally changed,
+      internally consistent version of the timeline. Clearly label assumptions rather than
+      treating them as facts.
+    reference_facts:
+      - A Tuesday-morning departure plus exactly 30 hours cannot produce a Tuesday-evening arrival.
+      - If Mira is part of the team and arrived six hours earlier, either she traveled separately/faster or the statement that nobody traveled faster needs qualification.
+      - Multiple repairs are possible, but added assumptions must be explicitly labeled.
+    criteria: [coherence, factuality, internal_consistency, instruction_following, fluency]
