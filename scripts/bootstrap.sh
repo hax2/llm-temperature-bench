@@ -18,11 +18,24 @@ fi
 
 if [[ -n "${TORCH_INDEX_URL:-}" ]]; then
   "$VENV/bin/python" -m pip install --index-url "$TORCH_INDEX_URL" \
-    "torch>=2.8,<3" "torchvision>=0.23,<1"
-  "$VENV/bin/python" -m pip install -e "$ROOT[gpu]"
+    "torch>=2.7,<3" "torchvision>=0.22,<1"
 else
-  "$VENV/bin/python" -m pip install -e "$ROOT[gpu]"
+  DRIVER_VERSION=""
+  if command -v nvidia-smi >/dev/null 2>&1; then
+    DRIVER_VERSION="$(nvidia-smi --query-gpu=driver_version --format=csv,noheader \
+      | head -n 1 | tr -d '[:space:]')"
+  fi
+  DRIVER_MAJOR="${DRIVER_VERSION%%.*}"
+  if [[ "$DRIVER_MAJOR" =~ ^[0-9]+$ ]] && (( DRIVER_MAJOR < 580 )); then
+    echo "NVIDIA driver $DRIVER_VERSION detected; installing CUDA 11.8-compatible PyTorch."
+    "$VENV/bin/python" -m pip install --index-url \
+      https://download.pytorch.org/whl/cu118 \
+      "torch==2.7.1" "torchvision==0.22.1"
+  else
+    "$VENV/bin/python" -m pip install "torch>=2.7,<3" "torchvision>=0.22,<1"
+  fi
 fi
+"$VENV/bin/python" -m pip install -e "$ROOT[gpu]"
 
 "$VENV/bin/python" - <<'PY'
 import torch

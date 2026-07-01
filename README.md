@@ -41,6 +41,8 @@ TORCH_INDEX_URL=https://download.pytorch.org/whl/cu128 ./scripts/bootstrap.sh
 
 The script deliberately does not install FlashAttention: SDPA works across more GPUs
 and models. After the baseline works, FlashAttention can be tested separately.
+It also detects pre-CUDA-13 NVIDIA drivers and installs the official CUDA 11.8
+PyTorch 2.7.1 wheels instead of an incompatible newer CUDA runtime.
 
 `HF_HOME` does not need to be configured on managed Jupyter servers. When it is unset,
 the runner compares the default home cache with `/home/jovyan/.cache/huggingface` and
