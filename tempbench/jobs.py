@@ -8,6 +8,8 @@ from tempbench.storage import Job
 
 
 def select_models(config: BenchmarkConfig, requested: Iterable[str] | None) -> list[ModelSpec]:
+    if not requested:
+        return [model for model in config.models if model.enabled]
     return _select(config.models, requested, "model")
 
 

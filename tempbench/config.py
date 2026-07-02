@@ -51,6 +51,7 @@ class ModelSpec(StrictModel):
     variant: Literal["base", "instruct"]
     loader: Literal["causal", "multimodal", "custom"] = "causal"
     gated: bool = False
+    enabled: bool = True
     trust_remote_code: bool = False
     revision: str | None = None
     chat_template_kwargs: dict[str, bool] = Field(default_factory=dict)

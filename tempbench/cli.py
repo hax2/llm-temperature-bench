@@ -55,9 +55,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     load_dotenv()
-    cache_path = configure_huggingface_cache()
     args = build_parser().parse_args(argv)
     try:
+        cache_path = None
+        if args.command in {"preflight", "generate", "run"}:
+            cache_path = configure_huggingface_cache()
         config = load_config(args.config)
         models = select_models(config, _split_filters(args.models))
         prompts = select_prompts(config, _split_filters(args.prompts))

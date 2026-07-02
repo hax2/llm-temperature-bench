@@ -5,8 +5,9 @@ sampling temperature rises. It generates the same factual, creative, and reasoni
 tasks at `T = 0.5, 1.0, 1.5, 2.0, 2.5, 3.0`, computes deterministic degeneration
 metrics, and sends outputs to Gemini for blind structured scoring.
 
-The default matrix contains 18 checkpoints, 6 tasks, and 6 temperatures: **648 local
-generations and up to 648 Gemini requests**. Models are loaded one at a time because a
+The default matrix contains 16 enabled checkpoints, 6 tasks, and 6 temperatures:
+**576 local generations and up to 576 Gemini requests**. The two Gemma 3 27B
+checkpoints remain defined but disabled for 40 GB GPUs. Models are loaded one at a time because a
 27B checkpoint can consume most of a large GPU. Gemini judging runs concurrently in a
 thread pool while the next local batches generate.
 
@@ -147,7 +148,9 @@ Limitations:
 
 ## Checkpoints and compatibility
 
-Checkpoint IDs live in `configs/models.yaml`. The newer Qwen 3.5, Gemma 3/4, and NVIDIA
+Checkpoint IDs live in `configs/models.yaml`. Set a model's `enabled` field to select
+whether it participates by default; explicitly naming a disabled model with `--models`
+still runs it. The newer Qwen 3.5, Gemma 3/4, and NVIDIA
 models use multimodal or custom loaders even though this benchmark supplies text only.
 NVIDIA Nemotron Labs Diffusion requires `trust_remote_code`; it is enabled only for that
 explicit model entry. Its benchmark adapter uses the model's AR generation mode because

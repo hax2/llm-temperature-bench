@@ -2,7 +2,7 @@ from pathlib import Path
 
 from tempbench.cli import _split_filters, build_parser
 from tempbench.config import load_config
-from tempbench.jobs import create_jobs
+from tempbench.jobs import create_jobs, select_models
 
 
 ROOT = Path(__file__).parents[1]
@@ -10,10 +10,12 @@ ROOT = Path(__file__).parents[1]
 
 def test_default_matrix_has_expected_size():
     config = load_config(ROOT / "configs/benchmark.yaml")
-    jobs = create_jobs(config, config.models, config.prompts)
+    selected = select_models(config, None)
+    jobs = create_jobs(config, selected, config.prompts)
     assert len(config.models) == 18
+    assert len(selected) == 16
     assert len(config.prompts) == 6
-    assert len(jobs) == 18 * 6 * 6
+    assert len(jobs) == 16 * 6 * 6
     assert {job.temperature for job in jobs} == {0.5, 1.0, 1.5, 2.0, 2.5, 3.0}
 
 

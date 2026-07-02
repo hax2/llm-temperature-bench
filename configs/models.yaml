@@ -54,11 +54,13 @@ models:
   - id: gemma-3-27b-base
     repo: google/gemma-3-27b-pt
     variant: base
+    enabled: false
     gated: true
     loader: multimodal
   - id: gemma-3-27b-it
     repo: google/gemma-3-27b-it
     variant: instruct
+    enabled: false
     gated: true
     loader: multimodal
 
