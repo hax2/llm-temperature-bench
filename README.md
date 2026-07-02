@@ -79,6 +79,15 @@ tempbench --run-name baseline judge
 tempbench --run-name baseline report
 ```
 
+Run the compact high-temperature sampler comparison:
+
+```bash
+tempbench --config configs/sampler-pilot.yaml \
+  --run-name sampler-pilot \
+  --models llama-3.1-8b-base,llama-3.1-8b-instruct,qwen-2.5-14b-base,qwen-2.5-14b-instruct \
+  --prompts everest_facts,causal_clockwork_story,contradiction_repair run
+```
+
 Every completed generation and judgment is an atomic JSON file. Repeating the same
 command skips completed work. `Ctrl-C`, an API quota error, a model-access error, and a
 GPU OOM therefore do not discard prior results. Failures are written under
@@ -122,6 +131,11 @@ Local metrics independently record word count, lexical diversity, repeated bigra
 trigram rates, and machine-checkable constraints. Sampling keeps `top_p=1` and `top_k=0`
 so temperature is the manipulated decoding parameter. Conditions use paired seeds and
 stable batch ordering across temperatures.
+
+Alternative sampler profiles can be defined under `run.sampling_profiles`. Each profile
+has an `id`, `top_p`, `top_k`, and optional `min_p`; profile IDs become part of job
+identity and report grouping. `configs/sampler-pilot.yaml` provides a compact high-
+temperature comparison of unfiltered, top-k, nucleus, min-p, and combined sampling.
 
 One output per condition is suitable for a pilot, not a strong statistical conclusion.
 For a serious comparison, set:

@@ -1,0 +1,49 @@
+run:
+  output_dir: results
+  temperatures: [1.5, 2.0, 2.5, 3.0]
+  sampling_profiles:
+    - id: unfiltered
+      top_p: 1.0
+      top_k: 0
+      min_p: null
+    - id: top-k-20
+      top_p: 1.0
+      top_k: 20
+      min_p: null
+    - id: top-k-60
+      top_p: 1.0
+      top_k: 60
+      min_p: null
+    - id: top-p-090
+      top_p: 0.90
+      top_k: 0
+      min_p: null
+    - id: min-p-005
+      top_p: 1.0
+      top_k: 0
+      min_p: 0.05
+    - id: combined
+      top_p: 0.95
+      top_k: 60
+      min_p: 0.03
+  samples_per_condition: 1
+  max_new_tokens: 1400
+  batch_size: 2
+  seed: 20260701
+  dtype: bfloat16
+  quantization: none
+  attn_implementation: sdpa
+  device_map: auto
+  low_cpu_mem_usage: true
+  trust_remote_code: false
+
+judge:
+  enabled: true
+  model: gemini-3-flash-preview
+  concurrency: 8
+  max_attempts: 7
+  request_timeout_seconds: 180
+  temperature: 0.0
+
+models_file: configs/models.yaml
+prompts_file: configs/prompts.yaml

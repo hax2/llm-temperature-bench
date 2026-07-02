@@ -16,6 +16,7 @@ class Job:
     temperature: float
     sample: int
     seed: int
+    sampling_profile: str = "unfiltered"
 
     @property
     def temperature_slug(self) -> str:
@@ -23,7 +24,15 @@ class Job:
 
     @property
     def key(self) -> str:
-        return f"{self.model_id}__{self.prompt_id}__t{self.temperature_slug}__s{self.sample:02d}"
+        profile = (
+            ""
+            if self.sampling_profile == "unfiltered"
+            else f"__p{self.sampling_profile}"
+        )
+        return (
+            f"{self.model_id}__{self.prompt_id}__t{self.temperature_slug}"
+            f"{profile}__s{self.sample:02d}"
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

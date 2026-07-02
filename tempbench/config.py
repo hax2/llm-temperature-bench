@@ -13,9 +13,19 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class SamplingProfile(StrictModel):
+    id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]*$")
+    top_p: float = Field(default=1.0, gt=0, le=1)
+    top_k: int = Field(default=0, ge=0)
+    min_p: float | None = Field(default=None, gt=0, le=1)
+
+
 class RunSettings(StrictModel):
     output_dir: Path = Path("results")
     temperatures: list[float]
+    sampling_profiles: list[SamplingProfile] = Field(
+        default_factory=lambda: [SamplingProfile(id="unfiltered")]
+    )
     samples_per_condition: int = Field(default=1, ge=1)
     max_new_tokens: int = Field(default=900, ge=1)
     batch_size: int = Field(default=1, ge=1)
@@ -28,11 +38,16 @@ class RunSettings(StrictModel):
     trust_remote_code: bool = False
 
     @model_validator(mode="after")
-    def unique_temperatures(self) -> "RunSettings":
+    def validate_conditions(self) -> "RunSettings":
         if not self.temperatures or any(t <= 0 for t in self.temperatures):
             raise ValueError("temperatures must be non-empty and greater than zero")
         if len(set(self.temperatures)) != len(self.temperatures):
             raise ValueError("temperatures must be unique")
+        if not self.sampling_profiles:
+            raise ValueError("sampling_profiles must be non-empty")
+        profile_ids = [profile.id for profile in self.sampling_profiles]
+        if len(set(profile_ids)) != len(profile_ids):
+            raise ValueError("sampling profile IDs must be unique")
         return self
 
 
@@ -89,6 +104,12 @@ class BenchmarkConfig(StrictModel):
         # Operational controls may safely change while resuming. Semantic generation
         # and scoring settings remain in the fingerprint.
         payload["run"].pop("output_dir", None)
+        # Preserve the fingerprint used by runs created before sampling profiles
+        # existed when the effective settings are the original unfiltered defaults.
+        if payload["run"].get("sampling_profiles") == [
+            {"id": "unfiltered", "top_p": 1.0, "top_k": 0, "min_p": None}
+        ]:
+            payload["run"].pop("sampling_profiles")
         payload["judge"].pop("concurrency", None)
         payload["judge"].pop("max_attempts", None)
         payload["judge"].pop("request_timeout_seconds", None)

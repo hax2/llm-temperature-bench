@@ -36,19 +36,21 @@ def create_jobs(
     jobs = []
     for model in models:
         for temperature in config.run.temperatures:
-            for prompt in prompts:
-                for sample in range(1, config.run.samples_per_condition + 1):
-                    # Excluding temperature couples the RNG stream across temperature
-                    # conditions, reducing an avoidable source of sampling variance.
-                    key = f"{model.id}|{prompt.id}|{sample}|{config.run.seed}"
-                    offset = int(hashlib.sha256(key.encode()).hexdigest()[:8], 16)
-                    jobs.append(
-                        Job(
-                            model_id=model.id,
-                            prompt_id=prompt.id,
-                            temperature=temperature,
-                            sample=sample,
-                            seed=(config.run.seed + offset) % (2**31),
+            for profile in config.run.sampling_profiles:
+                for prompt in prompts:
+                    for sample in range(1, config.run.samples_per_condition + 1):
+                        # Excluding temperature and sampling profile couples the RNG
+                        # stream across conditions, reducing avoidable sampling variance.
+                        key = f"{model.id}|{prompt.id}|{sample}|{config.run.seed}"
+                        offset = int(hashlib.sha256(key.encode()).hexdigest()[:8], 16)
+                        jobs.append(
+                            Job(
+                                model_id=model.id,
+                                prompt_id=prompt.id,
+                                temperature=temperature,
+                                sample=sample,
+                                seed=(config.run.seed + offset) % (2**31),
+                                sampling_profile=profile.id,
+                            )
                         )
-                    )
     return jobs

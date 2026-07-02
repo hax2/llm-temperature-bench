@@ -112,6 +112,7 @@ def command_plan(
     table.add_row("Models", str(len(models)))
     table.add_row("Prompts", str(len(prompts)))
     table.add_row("Temperatures", str(len(config.run.temperatures)))
+    table.add_row("Sampling profiles", str(len(config.run.sampling_profiles)))
     table.add_row("Samples / condition", str(config.run.samples_per_condition))
     table.add_row("Total generations", str(len(jobs)))
     table.add_row("Already generated", str(complete))
@@ -271,26 +272,28 @@ def command_generate(
                         f"[yellow]{model.id}[/yellow] uses batch_size=1 because its "
                         "custom AR method does not accept an attention mask."
                     )
-                grouped: dict[float, list[Job]] = defaultdict(list)
+                grouped: dict[tuple[float, str], list[Job]] = defaultdict(list)
                 for job in model_jobs:
-                    grouped[job.temperature].append(job)
+                    grouped[(job.temperature, job.sampling_profile)].append(job)
                 for temperature in config.run.temperatures:
-                    temperature_jobs = grouped.get(temperature, [])
-                    for start in range(0, len(temperature_jobs), batch_size):
-                        batch_jobs = temperature_jobs[start : start + batch_size]
-                        items = [(job, prompt_by_id[job.prompt_id]) for job in batch_jobs]
-                        try:
-                            generator.generate_batch(items, save_result)
-                        except Exception as exc:
-                            failures += len(items)
-                            for job, _prompt in items:
-                                _write_failure(store, "generate", job, exc)
-                            console.print(
-                                f"[red]Generation failed[/red] {model_id}, "
-                                f"T={temperature:g}, batch={len(items)}: {exc}"
-                            )
-                            if fail_fast:
-                                raise
+                    for profile in config.run.sampling_profiles:
+                        condition_jobs = grouped.get((temperature, profile.id), [])
+                        for start in range(0, len(condition_jobs), batch_size):
+                            batch_jobs = condition_jobs[start : start + batch_size]
+                            items = [(job, prompt_by_id[job.prompt_id]) for job in batch_jobs]
+                            try:
+                                generator.generate_batch(items, save_result)
+                            except Exception as exc:
+                                failures += len(items)
+                                for job, _prompt in items:
+                                    _write_failure(store, "generate", job, exc)
+                                console.print(
+                                    f"[red]Generation failed[/red] {model_id}, "
+                                    f"T={temperature:g}, profile={profile.id}, "
+                                    f"batch={len(items)}: {exc}"
+                                )
+                                if fail_fast:
+                                    raise
         except Exception as exc:
             remaining = [job for job in model_jobs if not store.generation_path(job).exists()]
             failures += len(remaining)

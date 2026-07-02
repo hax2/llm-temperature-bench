@@ -46,14 +46,22 @@ def build_reports(store: RunStore) -> dict[str, Path]:
 
 def _job_suffix(record: dict[str, Any]) -> str:
     job = record["job"]
-    return f"{job['prompt_id']}|{job['temperature']}|{job['sample']}"
+    profile = job.get("sampling_profile", "unfiltered")
+    return f"{job['prompt_id']}|{job['temperature']}|{profile}|{job['sample']}"
 
 
 def _flatten(generation: dict[str, Any], judgment: dict[str, Any] | None) -> dict[str, Any]:
     job = generation["job"]
     local = generation.get("local_metrics", {})
+    sampling = generation.get("sampling", {})
     row: dict[str, Any] = {
         **job,
+        "sampling_profile": job.get(
+            "sampling_profile", sampling.get("profile", "unfiltered")
+        ),
+        "top_p": sampling.get("top_p", 1.0),
+        "top_k": sampling.get("top_k", 0),
+        "min_p": sampling.get("min_p"),
         "repo": generation["model"]["repo"],
         "variant": generation["model"]["variant"],
         "category": generation["prompt"]["category"],
@@ -76,13 +84,17 @@ def _flatten(generation: dict[str, Any], judgment: dict[str, Any] | None) -> dic
 
 
 def _summarize(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    groups: dict[tuple[str, float], list[dict[str, Any]]] = defaultdict(list)
+    groups: dict[tuple[str, str, float], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
-        groups[(row["model_id"], row["temperature"])].append(row)
+        groups[(row["model_id"], row["sampling_profile"], row["temperature"])].append(row)
     result = []
-    for (model_id, temperature), members in sorted(groups.items()):
+    for (model_id, sampling_profile, temperature), members in sorted(groups.items()):
         summary: dict[str, Any] = {
             "model_id": model_id,
+            "sampling_profile": sampling_profile,
+            "top_p": members[0]["top_p"],
+            "top_k": members[0]["top_k"],
+            "min_p": members[0]["min_p"],
             "temperature": temperature,
             "generations": len(members),
             "judged": sum(bool(row["judged"]) for row in members),
@@ -114,6 +126,10 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 def _render_html(rows: list[dict[str, Any]], generated: int, judged: int) -> str:
     columns = [
         "model_id",
+        "sampling_profile",
+        "top_p",
+        "top_k",
+        "min_p",
         "temperature",
         "generations",
         "judged",

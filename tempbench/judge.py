@@ -51,6 +51,8 @@ class GeminiJudgePool:
         )
         self.futures: dict[Future, Job] = {}
         self.local = threading.local()
+        self.persist_lock = threading.Lock()
+        self.outcomes: dict[str, bool] = {}
 
     def submit(
         self,
@@ -65,6 +67,11 @@ class GeminiJudgePool:
             return False
         future = self.executor.submit(self._judge_one, job, prompt, generation)
         self.futures[future] = job
+        future.add_done_callback(
+            lambda completed, submitted_job=job: self._persist_completed(
+                completed, submitted_job
+            )
+        )
         return True
 
     def drain(self) -> tuple[int, int]:
@@ -73,16 +80,30 @@ class GeminiJudgePool:
         total = len(self.futures)
         for index, future in enumerate(as_completed(self.futures), 1):
             job = self.futures[future]
+            if self._persist_completed(future, job):
+                succeeded += 1
+            else:
+                failed += 1
+            console.print(f"[cyan]Judge drain[/cyan] {index}/{total}")
+        self.futures.clear()
+        self.executor.shutdown(wait=True)
+        return succeeded, failed
+
+    def _persist_completed(self, future: Future, job: Job) -> bool:
+        with self.persist_lock:
+            previous = self.outcomes.get(job.key)
+            if previous is not None:
+                return previous
             try:
                 record = future.result()
                 atomic_write_json(self.store.judgment_path(job), record)
-                succeeded += 1
+                outcome = True
                 console.print(
                     f"[green]Judged[/green] {job.key} "
-                    f"({index}/{total}, overall={record['scores']['overall']['score']})"
+                    f"(overall={record['scores']['overall']['score']})"
                 )
             except Exception as exc:
-                failed += 1
+                outcome = False
                 atomic_write_json(
                     self.store.failure_path("judge", job.key),
                     {
@@ -94,9 +115,8 @@ class GeminiJudgePool:
                     },
                 )
                 console.print(f"[red]Judge failed[/red] {job.key}: {exc}")
-        self.futures.clear()
-        self.executor.shutdown(wait=True)
-        return succeeded, failed
+            self.outcomes[job.key] = outcome
+            return outcome
 
     def _judge_one(
         self, job: Job, prompt: PromptSpec, generation: dict[str, Any]

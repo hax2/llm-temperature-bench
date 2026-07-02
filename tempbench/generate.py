@@ -170,6 +170,16 @@ class TransformersGenerator:
     ) -> None:
         prompts = [self._render_prompt(prompt) for _, prompt in items]
         temperature = items[0][0].temperature
+        profile_id = items[0][0].sampling_profile
+        if any(
+            job.temperature != temperature or job.sampling_profile != profile_id
+            for job, _ in items
+        ):
+            raise ValueError("A generation batch cannot mix temperatures or sampling profiles")
+        profiles = {profile.id: profile for profile in self.settings.sampling_profiles}
+        profile = profiles.get(profile_id)
+        if profile is None:
+            raise ValueError(f"Unknown sampling profile in job: {profile_id}")
         started = time.monotonic()
         self.torch.manual_seed(items[0][0].seed)
         self.torch.cuda.manual_seed_all(items[0][0].seed)
@@ -181,8 +191,9 @@ class TransformersGenerator:
             "max_new_tokens": self.settings.max_new_tokens,
             "do_sample": True,
             "temperature": temperature,
-            "top_p": 1.0,
-            "top_k": 0,
+            "top_p": profile.top_p,
+            "top_k": profile.top_k,
+            "min_p": profile.min_p,
             "use_cache": True,
         }
         tokenizer = self._tokenizer()
@@ -219,9 +230,11 @@ class TransformersGenerator:
                     "text": prompt.prompt,
                 },
                 "sampling": {
+                    "profile": profile.id,
                     "temperature": temperature,
-                    "top_p": 1.0,
-                    "top_k": 0,
+                    "top_p": profile.top_p,
+                    "top_k": profile.top_k,
+                    "min_p": profile.min_p,
                     "do_sample": True,
                     "max_new_tokens": self.settings.max_new_tokens,
                     "paired_job_seed": job.seed,
@@ -279,6 +292,8 @@ class TransformersGenerator:
                 f"{self.spec.repo} ar_generate does not expose temperature; "
                 "refusing to produce a mislabeled temperature condition"
             )
+        if kwargs.get("min_p") is None:
+            kwargs = {key: value for key, value in kwargs.items() if key != "min_p"}
         filtered = (
             kwargs
             if accepts_kwargs
