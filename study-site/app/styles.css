@@ -112,8 +112,8 @@ h1 { font-size: clamp(32px, 4.2vw, 52px); letter-spacing: -.035em; line-height: 
 label { color: var(--muted); display: grid; font-size: 10px; font-weight: 700; gap: 6px; text-transform: uppercase; }
 select, input { background: white; border: 1px solid #bfc7d4; border-radius: 3px; color: var(--ink); min-height: 42px; padding: 0 12px; }
 select:focus, input:focus { border-color: var(--blue); outline: 2px solid rgba(29, 78, 216, .12); }
-.comparison-grid { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); }
-.sample-card, .library-card { border: 1px solid var(--line); display: flex; flex-direction: column; min-height: 320px; padding: 18px; }
+.comparison-grid { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sample-card, .library-card { border: 1px solid var(--line); display: flex; flex-direction: column; min-height: 320px; min-width: 0; overflow: hidden; padding: 18px; }
 .sample-card header, .library-card header { align-items: center; display: flex; justify-content: space-between; }
 .sample-card header strong { font-size: 13px; }
 .score { align-items: center; background: var(--soft); border-radius: 3px; display: inline-flex; font-size: 12px; font-weight: 750; height: 30px; justify-content: center; width: 38px; }
@@ -121,11 +121,11 @@ select:focus, input:focus { border-color: var(--blue); outline: 2px solid rgba(2
 .score.medium { background: #fef0c7; color: #93370d; }
 .score.low { background: #fee4e2; color: var(--red); }
 .sample-meta { color: var(--muted); font-size: 9px; margin: 12px 0; text-transform: uppercase; }
-.sample-card > p, .library-card > p { color: #3e495b; display: -webkit-box; font: 13px/1.62 Georgia, serif; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 9; }
+.sample-card > p, .library-card > p { color: #3e495b; display: -webkit-box; font: 13px/1.62 Georgia, serif; max-width: 100%; overflow: hidden; overflow-wrap: anywhere; word-break: break-word; -webkit-box-orient: vertical; -webkit-line-clamp: 9; }
 .sample-card > button, .library-card > button { background: none; border: 0; border-top: 1px solid var(--line); color: var(--blue); cursor: pointer; font-size: 10px; font-weight: 700; margin-top: auto; padding: 12px 0 0; text-align: left; }
 .library-controls { align-items: center; display: grid; gap: 12px; grid-template-columns: 1fr 230px auto; margin-bottom: 20px; }
 .library-controls span { color: var(--muted); font-size: 10px; }
-.library-grid { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); }
+.library-grid { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .library-card h2 { font-size: 16px; margin: 18px 0 0; }
 .library-card header > span { color: var(--muted); font-size: 9px; font-weight: 650; text-transform: uppercase; }
 
@@ -141,7 +141,7 @@ select:focus, input:focus { border-color: var(--blue); outline: 2px solid rgba(2
 .sample-scores dd { font-size: 10px; font-weight: 750; margin: 0; }
 .problem-box { background: #fff4f2; border-left: 3px solid var(--red); color: #712b24; font-size: 11px; line-height: 1.55; margin: 20px 0; padding: 17px; }
 .problem-box ul { margin-bottom: 0; padding-left: 18px; }
-.output { color: #2f3949; font: 15px/1.72 Georgia, serif; white-space: pre-wrap; }
+.output { color: #2f3949; font: 15px/1.72 Georgia, serif; overflow-wrap: anywhere; white-space: pre-wrap; word-break: break-word; }
 
 footer { border-top: 1px solid var(--line); color: var(--muted); display: flex; font-size: 10px; justify-content: space-between; padding: 25px 4vw; }
 
