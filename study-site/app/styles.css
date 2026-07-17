@@ -63,9 +63,31 @@ h1 { font-size: clamp(32px, 4.2vw, 52px); letter-spacing: -.035em; line-height: 
 .button-group button { background: none; border: 0; border-radius: 3px; cursor: pointer; font-size: 12px; padding: 8px 14px; }
 .button-group button.active { background: white; box-shadow: 0 1px 4px rgba(23,32,51,.12); font-weight: 700; }
 .link-button { background: none; border: 0; color: var(--blue); cursor: pointer; font-size: 11px; font-weight: 650; margin-left: 15px; padding: 5px 0; }
-.graph-panel { border: 1px solid var(--line); }
+.graph-panel { border: 1px solid var(--line); position: relative; }
 .graph-scroll { overflow-x: auto; }
 .model-graph { display: block; min-width: 760px; width: 100%; }
+.visible-curve, .model-graph circle { pointer-events: none; transition: opacity 120ms ease, stroke-width 120ms ease; }
+.curve-hit-target { cursor: crosshair; outline: none; pointer-events: stroke; }
+.curve-hit-target:focus { stroke: rgba(29, 78, 216, .08); }
+.graph-hover-label {
+  background: rgba(23, 32, 51, .9);
+  border-radius: 3px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  min-height: 48px;
+  min-width: 180px;
+  opacity: .72;
+  padding: 9px 12px;
+  pointer-events: none;
+  position: absolute;
+  right: 16px;
+  top: 14px;
+  z-index: 3;
+}
+.graph-hover-label.visible { opacity: 1; }
+.graph-hover-label span { color: #c8d0dc; font-size: 8px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.graph-hover-label strong { font-size: 11px; margin-top: 4px; }
 .grid-line { stroke: #e0e5ed; stroke-dasharray: 3 5; }
 .axis-text { fill: #687387; font: 11px Inter, sans-serif; }
 .cutoff-line { stroke: var(--red); stroke-dasharray: 5 5; stroke-width: 1.5; }

@@ -148,6 +148,7 @@ function ModelGraph() {
   const modelIds = useMemo(() => [...new Set(rows.map((row) => row.model_id))], []);
   const [variant, setVariant] = useState("all");
   const [visible, setVisible] = useState(modelIds);
+  const [hoveredModel, setHoveredModel] = useState(null);
   const filteredModels = modelIds.filter((id) => {
     if (variant === "all") return true;
     const row = rows.find((item) => item.model_id === id);
@@ -192,6 +193,10 @@ function ModelGraph() {
       </div>
 
       <section className="graph-panel">
+        <div className={hoveredModel ? "graph-hover-label visible" : "graph-hover-label"}>
+          <span>{hoveredModel ? "Model" : "Hover a line"}</span>
+          {hoveredModel && <strong>{modelName(hoveredModel)}</strong>}
+        </div>
         <div className="graph-scroll">
           <svg viewBox={`0 0 ${width} ${height}`} className="model-graph" role="img" aria-label="Overall quality score by model and temperature">
             {[1, 3, 5, 7, 9].map((value) => (
@@ -207,14 +212,39 @@ function ModelGraph() {
             {series.map(({ model, values }) => {
               const color = COLORS[modelIds.indexOf(model) % COLORS.length];
               const points = values.map((value, index) => `${x(index)},${y(value)}`).join(" ");
+              const isHovered = hoveredModel === model;
+              const isStandout = model === "gemma-4-e4b-it";
               return (
                 <g key={model}>
-                  <polyline points={points} fill="none" stroke={color} strokeWidth={model === "gemma-4-e4b-it" ? 4 : 2.2} opacity={model === "gemma-4-e4b-it" ? 1 : .78} />
+                  <polyline
+                    points={points}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={isHovered ? 5 : isStandout ? 4 : 2.2}
+                    opacity={hoveredModel ? isHovered ? 1 : .14 : isStandout ? 1 : .78}
+                    className="visible-curve"
+                  />
                   {values.map((value, index) => (
-                    <circle key={index} cx={x(index)} cy={y(value)} r={model === "gemma-4-e4b-it" ? 5 : 3.5} fill={color}>
+                    <circle key={index} cx={x(index)} cy={y(value)} r={isStandout ? 5 : 3.5} fill={color} opacity={hoveredModel ? isHovered ? 1 : .14 : 1}>
                       <title>{`${modelName(model)} · T=${GRAPH_TEMPS[index]} · ${fmt(value)}`}</title>
                     </circle>
                   ))}
+                  <polyline
+                    points={points}
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth="16"
+                    className="curve-hit-target"
+                    role="button"
+                    tabIndex="0"
+                    aria-label={modelName(model)}
+                    onMouseEnter={() => setHoveredModel(model)}
+                    onMouseLeave={() => setHoveredModel(null)}
+                    onFocus={() => setHoveredModel(model)}
+                    onBlur={() => setHoveredModel(null)}
+                  >
+                    <title>{modelName(model)}</title>
+                  </polyline>
                 </g>
               );
             })}
