@@ -3,20 +3,31 @@
 import { useMemo, useState } from "react";
 import rows from "../data/results.json";
 
-const ALL_TEMPS = [0.5, 1, 1.5, 2, 2.5, 3];
-const GRAPH_TEMPS = [0.5, 1, 1.5, 2];
+const ALL_TEMPS = [1.5, 2, 2.5, 3];
+const GRAPH_TEMPS = ALL_TEMPS;
 const PROMPTS = {
-  apollo_11_facts: "Apollo 11 factual account",
   everest_facts: "Mount Everest factual account",
-  constrained_lighthouse_story: "Constrained lighthouse story",
   causal_clockwork_story: "Causal clockwork story",
   contradiction_repair: "Contradiction repair",
-  synthesis_city_policy: "City-policy synthesis",
 };
-const COLORS = [
-  "#1d4ed8", "#dc2626", "#059669", "#7c3aed", "#d97706", "#0891b2", "#be123c", "#4f46e5",
-  "#15803d", "#c2410c", "#0f766e", "#9333ea", "#0369a1", "#b45309", "#4338ca", "#047857",
-];
+const PROFILES = ["unfiltered", "top-k-20", "top-k-60", "top-p-090", "min-p-005", "combined"];
+const PROFILE_NAMES = {
+  unfiltered: "Unfiltered",
+  "top-k-20": "Top-k 20",
+  "top-k-60": "Top-k 60",
+  "top-p-090": "Top-p 0.90",
+  "min-p-005": "Min-p 0.05",
+  combined: "Combined",
+};
+const PROFILE_DETAILS = {
+  unfiltered: "top-p 1.0 · top-k 0",
+  "top-k-20": "top-p 1.0 · top-k 20",
+  "top-k-60": "top-p 1.0 · top-k 60",
+  "top-p-090": "top-p 0.90 · top-k 0",
+  "min-p-005": "top-p 1.0 · min-p 0.05",
+  combined: "top-p 0.95 · top-k 60 · min-p 0.03",
+};
+const COLORS = ["#64748b", "#1d4ed8", "#0891b2", "#d97706", "#059669", "#7c3aed"];
 
 const numericMean = (values) => {
   const valid = values.filter((value) => value !== null && value !== "").map(Number).filter(Number.isFinite);
@@ -43,50 +54,44 @@ const modelName = (id) => id
 
 const FINDINGS = [
   {
-    title: "Temperature failure is a cliff, not a gradual decline.",
-    body: "Mean quality falls from 4.12 at T=0.5 to 3.13 at T=1.0, 1.30 at T=1.5, and the absolute floor of 1.0 from T=2.0 onward. For these models, temperatures above 1.5 are essentially unusable.",
-    values: ["4.12", "3.13", "1.30", "1.00"],
-    labels: ["T=0.5", "T=1.0", "T=1.5", "T≥2.0"],
+    title: "Filtering can shift the collapse threshold, but it does not remove it.",
+    body: "At T=1.5, the unfiltered sampler averages 1.00 while min-p 0.05 reaches 3.58. Across all samplers, however, no output at T≥2 scores 4 or higher. Filtering buys a narrow band of additional stability rather than making extreme temperatures generally usable.",
+    values: ["1.00", "3.58", "0 / 216"],
+    labels: ["unfiltered at T=1.5", "min-p 0.05 at T=1.5", "scores ≥4 at T≥2"],
   },
   {
-    title: "T=0.5 is the safest general default.",
-    body: "It was best for 15 of 16 models. The exception was Gemma 4 E4B Instruct, which improved from 6.83 at T=0.5 to 7.67 at T=1.0.",
-    stat: "15 / 16",
-    statLabel: "models peak at T=0.5",
+    title: "Min-p 0.05 is the strongest rescue strategy at T=1.5.",
+    body: "It produces the best aggregate score, 3.58, with 6 of 12 outputs scoring at least 4 and 4 scoring at least 5. Qwen 2.5 14B Instruct is the clearest success: it averages 5.33 and reaches 8 on the Everest task.",
+    stat: "6 / 12",
+    statLabel: "outputs score ≥4",
   },
   {
-    title: "Gemma 4 E4B Instruct is the standout.",
-    body: "It was the only model still producing useful output at T=1.5, scoring 5.83, while every other model averaged 1.0. That suggests unusually strong temperature robustness—or differently calibrated logits—rather than merely slightly better general quality.",
-    stat: "5.83",
-    statLabel: "overall at T=1.5",
+    title: "Simple nucleus sampling does not rescue this regime.",
+    body: "Top-p 0.90 remains at the floor score of 1.00 at every tested temperature and hits the token cap in 83% of outputs. At these temperatures, removing only the low-probability tail is not selective enough to restore coherent generation.",
+    values: ["1.00", "83%"],
+    labels: ["mean overall", "token-cap rate"],
   },
   {
-    title: "Instruction tuning matters enormously.",
-    body: "Across seven matched model families, instruct checkpoints beat their base versions by approximately +3.3 overall points at T=0.5 and +3.2 at T=1.0. For user-facing tasks, this effect is much larger than most differences between model families.",
-    values: ["+3.3", "+3.2"],
-    labels: ["T=0.5", "T=1.0"],
+    title: "Instruction tuning and filtering reinforce one another.",
+    body: "At T=1.5 with min-p 0.05, the two instruct checkpoints average 4.50 versus 2.67 for their base counterparts. With top-k 20, the split is 3.17 versus 1.17. The filter helps most when the underlying checkpoint is already instruction-aligned.",
+    values: ["4.50", "2.67"],
+    labels: ["instruct + min-p", "base + min-p"],
   },
   {
-    title: "More lexical diversity does not mean more creativity.",
-    body: "Unique-word ratio rises from 0.37 at T=0.5 to 0.96 at T=3.0, while quality collapses to 1. Random multilingual fragments look “diverse” to lexical metrics. Likewise, repetition metrics improve as outputs become gibberish. Diversity metrics need a coherence or validity gate.",
-    values: ["0.37", "0.96"],
-    labels: ["unique-word ratio at T=0.5", "unique-word ratio at T=3.0"],
+    title: "Termination control is not the same as quality control.",
+    body: "The combined filter reduces token-cap hits from 25% at T=1.5 to only 8% at T=3.0, yet its mean quality still falls from 2.58 to 1.08. A sampler can make degenerate output stop cleanly without making it coherent.",
+    values: ["8%", "1.08"],
+    labels: ["cap hits at T=3", "overall at T=3"],
   },
   {
-    title: "Higher temperature provided almost no useful creativity tradeoff.",
-    body: "The judge’s creativity subscore rises slightly at T=1.0, but overall creative-task quality still declines from 3.09 to 2.81. The extra novelty generally does not compensate for reduced control.",
-    values: ["3.09", "2.81"],
-    labels: ["creative-task quality, T=0.5", "creative-task quality, T=1.0"],
+    title: "Top-k 20 is modest but comparatively stable.",
+    body: "It never matches min-p’s T=1.5 peak, but it maintains means between 1.33 and 1.50 from T=2 through T=3 while keeping token-cap rates between 17% and 25%. It is a conservative containment strategy, not a quality rescue.",
+    values: ["1.50", "1.33"],
+    labels: ["overall at T=2", "overall at T=3"],
   },
   {
-    title: "The token cap becomes a useful warning signal.",
-    body: "Cap hits rise from roughly 35% at T=0.5 to 60% at T=1.5 and 95% at T=3.0. High-temperature degeneration often fails to terminate naturally.",
-    values: ["35%", "60%", "95%"],
-    labels: ["T=0.5", "T=1.5", "T=3.0"],
-  },
-  {
-    title: "Some tasks expose weakness sooner.",
-    body: "The causal clockwork story was already difficult at T=0.5, whereas city-policy synthesis remained comparatively resilient at T=1.0. A benchmark containing only straightforward factual prompts would therefore overestimate robustness.",
+    title: "The apparent rescue is task-dependent.",
+    body: "At T=1.5 with min-p 0.05, Everest factual writing averages 5.00 across models, contradiction repair averages 3.50, and the causal clockwork story remains substantially harder. Filter effectiveness should therefore be tested across task types, not inferred from factual prompts alone.",
   },
 ];
 
@@ -100,15 +105,15 @@ function Findings() {
   return (
     <div className="page">
       <header className="page-heading">
-        <p className="kicker">Baseline findings</p>
-        <h1>Temperature sensitivity in local language models</h1>
-        <p>Summary of 576 judged generations across 16 models, 6 tasks, and 6 sampling temperatures.</p>
+        <p className="kicker">Sampler-pilot findings</p>
+        <h1>Can sampling filters delay temperature collapse?</h1>
+        <p>Summary of 288 judged generations across 4 models, 3 tasks, 4 temperatures, and 6 sampling profiles.</p>
       </header>
 
       <blockquote className="headline">
-        Across these models, temperature behaves less like a smooth creativity dial and more like a
-        model-specific stability threshold. Instruction tuning raises useful quality, while Gemma 4 E4B
-        Instruct uniquely shifts the collapse threshold upward.
+        Filtering can shift the stability threshold, but not abolish it. At T=1.5, min-p 0.05
+        recovers useful output—especially for instruct models—while no tested sampler prevents
+        broad collapse at T≥2.
       </blockquote>
 
       <section className="finding-list" aria-label="Principal findings">
@@ -136,56 +141,56 @@ function Findings() {
         <h2>Interpretation boundary</h2>
         <p>
           These findings describe this benchmark’s model set, loaders, prompts, decoding configuration, and judge.
-          They should be treated as evidence about stability thresholds in this setup, not universal temperature
-          constants for every model or serving stack.
+          Each model–sampler–temperature point averages three tasks with one sample per task. The results identify
+          strong patterns in this run, but do not estimate sampling variance or universal thresholds.
         </p>
       </section>
     </div>
   );
 }
 
-function ModelGraph() {
+function SamplerGraph() {
   const modelIds = useMemo(() => [...new Set(rows.map((row) => row.model_id))], []);
-  const [variant, setVariant] = useState("all");
-  const [visible, setVisible] = useState(modelIds);
-  const [hoveredModel, setHoveredModel] = useState(null);
-  const filteredModels = modelIds.filter((id) => {
-    if (variant === "all") return true;
-    const row = rows.find((item) => item.model_id === id);
-    return row?.variant === variant;
-  });
-  const shown = filteredModels.filter((id) => visible.includes(id));
-  const series = shown.map((model) => ({
-    model,
+  const [selectedModel, setSelectedModel] = useState("qwen-2.5-14b-instruct");
+  const [visible, setVisible] = useState(PROFILES);
+  const [hoveredProfile, setHoveredProfile] = useState(null);
+  const shown = PROFILES.filter((profile) => visible.includes(profile));
+  const series = shown.map((profile) => ({
+    profile,
     values: GRAPH_TEMPS.map((temperature) =>
-      numericMean(rows.filter((row) => row.model_id === model && row.temperature === temperature).map((row) => row.overall_score)),
+      numericMean(rows
+        .filter((row) =>
+          row.model_id === selectedModel
+          && row.sampling_profile === profile
+          && row.temperature === temperature,
+        )
+        .map((row) => row.overall_score)),
     ),
   }));
   const width = 1040;
   const height = 520;
   const x = (index) => 70 + index * ((width - 110) / (GRAPH_TEMPS.length - 1));
   const y = (value) => height - 55 - ((value - 1) / 9) * (height - 100);
-  const toggle = (model) => setVisible((current) =>
-    current.includes(model) ? current.filter((item) => item !== model) : [...current, model],
+  const toggle = (profile) => setVisible((current) =>
+    current.includes(profile) ? current.filter((item) => item !== profile) : [...current, profile],
   );
-  const setAll = (shouldShow) => setVisible(shouldShow ? modelIds : []);
+  const setAll = (shouldShow) => setVisible(shouldShow ? PROFILES : []);
 
   return (
     <div className="page">
       <header className="page-heading compact">
-        <p className="kicker">Model comparison</p>
-        <h1>Overall quality by temperature</h1>
-        <p>The graph stops at T=2.0 because every model is at the floor from that point onward.</p>
+        <p className="kicker">Sampler comparison</p>
+        <h1>Which filters delay collapse?</h1>
+        <p>Select a model to compare its six sampling profiles from T=1.5 through T=3.0.</p>
       </header>
 
       <div className="graph-controls">
-        <div className="button-group">
-          {["all", "instruct", "base"].map((value) => (
-            <button key={value} className={variant === value ? "active" : ""} onClick={() => setVariant(value)}>
-              {value[0].toUpperCase() + value.slice(1)}
-            </button>
-          ))}
-        </div>
+        <label className="graph-selector">
+          Model
+          <select value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)}>
+            {modelIds.map((model) => <option key={model} value={model}>{modelName(model)}</option>)}
+          </select>
+        </label>
         <div>
           <button className="link-button" onClick={() => setAll(true)}>Show all</button>
           <button className="link-button" onClick={() => setAll(false)}>Clear</button>
@@ -193,12 +198,12 @@ function ModelGraph() {
       </div>
 
       <section className="graph-panel">
-        <div className={hoveredModel ? "graph-hover-label visible" : "graph-hover-label"}>
-          <span>{hoveredModel ? "Model" : "Hover a line"}</span>
-          {hoveredModel && <strong>{modelName(hoveredModel)}</strong>}
+        <div className={hoveredProfile ? "graph-hover-label visible" : "graph-hover-label"}>
+          <span>{hoveredProfile ? "Sampler" : "Hover a line"}</span>
+          {hoveredProfile && <strong>{PROFILE_NAMES[hoveredProfile]}</strong>}
         </div>
         <div className="graph-scroll">
-          <svg viewBox={`0 0 ${width} ${height}`} className="model-graph" role="img" aria-label="Overall quality score by model and temperature">
+          <svg viewBox={`0 0 ${width} ${height}`} className="model-graph" role="img" aria-label={`Overall quality by sampler for ${modelName(selectedModel)}`}>
             {[1, 3, 5, 7, 9].map((value) => (
               <g key={value}>
                 <line x1="70" x2={width - 40} y1={y(value)} y2={y(value)} className="grid-line" />
@@ -208,25 +213,25 @@ function ModelGraph() {
             {GRAPH_TEMPS.map((value, index) => (
               <text key={value} x={x(index)} y={height - 20} textAnchor="middle" className="axis-text">T={value}</text>
             ))}
-            <line x1={x(3)} x2={x(3)} y1="35" y2={height - 55} className="cutoff-line" />
-            {series.map(({ model, values }) => {
-              const color = COLORS[modelIds.indexOf(model) % COLORS.length];
+            <line x1={x(1)} x2={x(1)} y1="35" y2={height - 55} className="cutoff-line" />
+            {series.map(({ profile, values }) => {
+              const color = COLORS[PROFILES.indexOf(profile)];
               const points = values.map((value, index) => `${x(index)},${y(value)}`).join(" ");
-              const isHovered = hoveredModel === model;
-              const isStandout = model === "gemma-4-e4b-it";
+              const isHovered = hoveredProfile === profile;
+              const isStandout = profile === "min-p-005";
               return (
-                <g key={model}>
+                <g key={profile}>
                   <polyline
                     points={points}
                     fill="none"
                     stroke={color}
                     strokeWidth={isHovered ? 5 : isStandout ? 4 : 2.2}
-                    opacity={hoveredModel ? isHovered ? 1 : .14 : isStandout ? 1 : .78}
+                    opacity={hoveredProfile ? isHovered ? 1 : .14 : isStandout ? 1 : .78}
                     className="visible-curve"
                   />
                   {values.map((value, index) => (
-                    <circle key={index} cx={x(index)} cy={y(value)} r={isStandout ? 5 : 3.5} fill={color} opacity={hoveredModel ? isHovered ? 1 : .14 : 1}>
-                      <title>{`${modelName(model)} · T=${GRAPH_TEMPS[index]} · ${fmt(value)}`}</title>
+                    <circle key={index} cx={x(index)} cy={y(value)} r={isStandout ? 5 : 3.5} fill={color} opacity={hoveredProfile ? isHovered ? 1 : .14 : 1}>
+                      <title>{`${PROFILE_NAMES[profile]} · T=${GRAPH_TEMPS[index]} · ${fmt(value)}`}</title>
                     </circle>
                   ))}
                   <polyline
@@ -237,13 +242,13 @@ function ModelGraph() {
                     className="curve-hit-target"
                     role="button"
                     tabIndex="0"
-                    aria-label={modelName(model)}
-                    onMouseEnter={() => setHoveredModel(model)}
-                    onMouseLeave={() => setHoveredModel(null)}
-                    onFocus={() => setHoveredModel(model)}
-                    onBlur={() => setHoveredModel(null)}
+                    aria-label={PROFILE_NAMES[profile]}
+                    onMouseEnter={() => setHoveredProfile(profile)}
+                    onMouseLeave={() => setHoveredProfile(null)}
+                    onFocus={() => setHoveredProfile(profile)}
+                    onBlur={() => setHoveredProfile(null)}
                   >
-                    <title>{modelName(model)}</title>
+                    <title>{PROFILE_NAMES[profile]}</title>
                   </polyline>
                 </g>
               );
@@ -251,20 +256,20 @@ function ModelGraph() {
           </svg>
         </div>
         <p className="graph-caption">
-          Each point is the mean of six tasks. Overall scores range from 1 (failure) to 10. Gemma 4 E4B
-          Instruct is drawn with a heavier line.
+          Each point is the mean of three tasks. Scores range from 1 (failure) to 10. Min-p 0.05 is
+          drawn with a heavier line; the dashed marker denotes T=2.0.
         </p>
       </section>
 
       <section className="legend-panel">
-        <h2>Models</h2>
+        <h2>Sampling profiles</h2>
         <div className="model-legend">
-          {filteredModels.map((model) => {
-            const active = visible.includes(model);
+          {PROFILES.map((profile) => {
+            const active = visible.includes(profile);
             return (
-              <button key={model} className={active ? "active" : ""} onClick={() => toggle(model)}>
-                <i style={{ background: COLORS[modelIds.indexOf(model) % COLORS.length] }} />
-                <span>{modelName(model)}</span>
+              <button key={profile} className={active ? "active" : ""} onClick={() => toggle(profile)}>
+                <i style={{ background: COLORS[PROFILES.indexOf(profile)] }} />
+                <span><strong>{PROFILE_NAMES[profile]}</strong><small>{PROFILE_DETAILS[profile]}</small></span>
               </button>
             );
           })}
@@ -272,16 +277,16 @@ function ModelGraph() {
       </section>
 
       <section className="curve-table-section">
-        <h2>Scores by condition</h2>
+        <h2>Mean scores for {modelName(selectedModel)}</h2>
         <div className="curve-table-wrap">
           <table className="curve-table">
-            <thead><tr><th>Model</th>{GRAPH_TEMPS.map((temp) => <th key={temp}>T={temp}</th>)}</tr></thead>
+            <thead><tr><th>Sampler</th>{GRAPH_TEMPS.map((temp) => <th key={temp}>T={temp}</th>)}</tr></thead>
             <tbody>
-              {series
+              {[...series]
                 .sort((a, b) => b.values[0] - a.values[0])
-                .map(({ model, values }) => (
-                  <tr key={model}>
-                    <td><i style={{ background: COLORS[modelIds.indexOf(model) % COLORS.length] }} />{modelName(model)}</td>
+                .map(({ profile, values }) => (
+                  <tr key={profile}>
+                    <td><i style={{ background: COLORS[PROFILES.indexOf(profile)] }} />{PROFILE_NAMES[profile]}</td>
                     {values.map((value, index) => <td key={GRAPH_TEMPS[index]}>{fmt(value)}</td>)}
                   </tr>
                 ))}
@@ -307,6 +312,7 @@ function SampleModal({ row, close }) {
         </header>
         <dl className="sample-scores">
           <div><dt>Temperature</dt><dd>{row.temperature}</dd></div>
+          <div><dt>Sampler</dt><dd>{PROFILE_NAMES[row.sampling_profile]}</dd></div>
           <div><dt>Coherence</dt><dd>{fmt(row.coherence_score, 1)}</dd></div>
           <div><dt>Factuality</dt><dd>{fmt(row.factuality_score, 1)}</dd></div>
           <div><dt>Creativity</dt><dd>{fmt(row.creativity_score, 1)}</dd></div>
@@ -325,14 +331,20 @@ function SampleModal({ row, close }) {
 function WritingBrowser() {
   const models = useMemo(() => [...new Set(rows.map((row) => row.model_id))], []);
   const promptIds = useMemo(() => [...new Set(rows.map((row) => row.prompt_id))], []);
-  const [model, setModel] = useState("gemma-4-e4b-it");
-  const [prompt, setPrompt] = useState("constrained_lighthouse_story");
+  const [model, setModel] = useState("qwen-2.5-14b-instruct");
+  const [profile, setProfile] = useState("min-p-005");
+  const [prompt, setPrompt] = useState("everest_facts");
   const [mode, setMode] = useState("compare");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [selected, setSelected] = useState(null);
   const comparison = ALL_TEMPS
-    .map((temperature) => rows.find((row) => row.model_id === model && row.prompt_id === prompt && row.temperature === temperature))
+    .map((temperature) => rows.find((row) =>
+      row.model_id === model
+      && row.sampling_profile === profile
+      && row.prompt_id === prompt
+      && row.temperature === temperature,
+    ))
     .filter(Boolean);
   const library = rows
     .filter((row) => category === "all" || row.category === category)
@@ -344,7 +356,7 @@ function WritingBrowser() {
       <header className="page-heading compact">
         <p className="kicker">Writing samples</p>
         <h1>Generated outputs and judge scores</h1>
-        <p>Compare one model and task across temperatures, or search the complete set of 576 outputs.</p>
+        <p>Compare one model, sampler, and task across temperatures, or search all 288 filtered-run outputs.</p>
       </header>
 
       <div className="subnav">
@@ -356,13 +368,14 @@ function WritingBrowser() {
         <>
           <div className="sample-controls">
             <label>Model<select value={model} onChange={(event) => setModel(event.target.value)}>{models.map((id) => <option key={id} value={id}>{modelName(id)}</option>)}</select></label>
+            <label>Sampler<select value={profile} onChange={(event) => setProfile(event.target.value)}>{PROFILES.map((id) => <option key={id} value={id}>{PROFILE_NAMES[id]} — {PROFILE_DETAILS[id]}</option>)}</select></label>
             <label>Task<select value={prompt} onChange={(event) => setPrompt(event.target.value)}>{promptIds.map((id) => <option key={id} value={id}>{PROMPTS[id]}</option>)}</select></label>
           </div>
           <div className="comparison-grid">
             {comparison.map((row) => (
               <article className="sample-card" key={row.temperature}>
                 <header><strong>T={row.temperature}</strong><Score value={row.overall_score} /></header>
-                <div className="sample-meta">{row.word_count} words · {row.hit_token_cap ? "token cap reached" : "terminated below cap"}</div>
+                <div className="sample-meta">{PROFILE_NAMES[row.sampling_profile]} · {row.word_count} words · {row.hit_token_cap ? "token cap reached" : "terminated below cap"}</div>
                 <p>{row.output}</p>
                 <button onClick={() => setSelected(row)}>Read full output and scores</button>
               </article>
@@ -383,10 +396,10 @@ function WritingBrowser() {
           </div>
           <div className="library-grid">
             {library.map((row) => (
-              <article className="library-card" key={`${row.model_id}-${row.prompt_id}-${row.temperature}`}>
+              <article className="library-card" key={`${row.model_id}-${row.sampling_profile}-${row.prompt_id}-${row.temperature}`}>
                 <header><span>{PROMPTS[row.prompt_id]}</span><Score value={row.overall_score} /></header>
                 <h2>{modelName(row.model_id)}</h2>
-                <div className="sample-meta">T={row.temperature} · {row.word_count} words</div>
+                <div className="sample-meta">{PROFILE_NAMES[row.sampling_profile]} · T={row.temperature} · {row.word_count} words</div>
                 <p>{row.output}</p>
                 <button onClick={() => setSelected(row)}>Open sample</button>
               </article>
@@ -405,23 +418,23 @@ export default function App() {
     <>
       <header className="site-header">
         <button className="study-title" onClick={() => setPage("findings")}>
-          <strong>Temperature Study</strong><span>Baseline · July 2026</span>
+          <strong>Temperature Study</strong><span>Sampler pilot · July 2026</span>
         </button>
         <nav>
           <button className={page === "findings" ? "active" : ""} onClick={() => setPage("findings")}>Findings</button>
-          <button className={page === "models" ? "active" : ""} onClick={() => setPage("models")}>Model graph</button>
+          <button className={page === "models" ? "active" : ""} onClick={() => setPage("models")}>Sampler graph</button>
           <button className={page === "samples" ? "active" : ""} onClick={() => setPage("samples")}>Writing browser</button>
         </nav>
-        <span className="status">576 / 576 judged</span>
+        <span className="status">288 / 288 judged</span>
       </header>
       <main>
         {page === "findings" && <Findings />}
-        {page === "models" && <ModelGraph />}
+        {page === "models" && <SamplerGraph />}
         {page === "samples" && <WritingBrowser />}
       </main>
       <footer>
-        <span>Temperature sensitivity benchmark</span>
-        <span>16 models · 6 prompts · 6 temperatures · 1 sample per condition</span>
+        <span>High-temperature sampler comparison</span>
+        <span>4 models · 3 prompts · 4 temperatures · 6 sampling profiles</span>
       </footer>
     </>
   );
